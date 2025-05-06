@@ -2,34 +2,176 @@
 import { test, expect, takeSnapshot } from "@chromatic-com/playwright";
 // import { test, expect } from '@playwright/test';
 import { LoginPage} from "../pages/common/loginPage";
-import { ProjectListPage } from '../pages/common/projectListPage';
+// import { ProjectListPage } from '../pages/common/projectListPage';
 //import { ViewerPage } from "../pages/viewer/viewerPage";
 
 
 
 test.use({ diffThreshold: 0.7 });
 
+
+
 test("Login to build", async ({ page }, testInfo) => {
   const Login = new LoginPage(page);
-  const projectList = new ProjectListPage(page);
+  //const projectList = new ProjectListPage(page);
   let BASE_URL = 'https://acc-qa.autodesk.com/projects'
   let SKIP_CAPTCHA_NEW_IDP = 'https://idp.auth-staging.autodesk.com/accounts/v1/hcaptcha/bypass'
   let SKIP_CAPTCHA_URL = "https://accounts-staging.autodesk.com/Authentication/LogOn?trustToken=BDF22F39-19F1-435D-AAD1-9CE5B6081173"
   let NEW_IDP_OPT_IN = 'https://accounts-staging.autodesk.com/idp-opt-in'
   let TOKEN = "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjM0MDczYThmLWYzZTItNGQ3Yy1hNDBiLWUxY2UyYzBhNzdiYyIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2F1dG9kZXNrLmNvbS9zdGFnaW5nIiwiY2xpZW50X2lkIjoib0dqaU9oSHFvY3g4emc2R0FkVXhpZzZyRnFGaTQya2NFemF5cmhXR01uelpweXJCIiwic2NvcGUiOlsiaWRlbnRpdHk6Y2FwdGNoYTpieXBhc3MiXSwiaXNzIjoiaHR0cHM6Ly9kZXZlbG9wZXItc3RnLmFwaS5hdXRvZGVzay5jb20iLCJleHAiOjIwNTI4MDQwNDQsImp0aSI6IjFhZjFkYzY4LWRkOGYtNDcwMC05OGZkLTI3MzFjMDcxM2M3OCJ9.lhdDa-LQQM2pFWxQotwJGRzR3C4aW_QTv4Y1EnDEtD5Yy7F0rnz83VGpBi_Sv2yNYeLA0LpZBDBr1FEGZQgNd3NX3lJiH8VjpWe9_GHrXuYxpsrLTqFesHtiUBOrcAxdfldOlvSdboS23qOyrKHKU8p7R04-tkIBns4qBwboiiG3K5kYEKUZLzd3UuLMmNR1T6nB48EUkTe_mqABxLXed_BiZ5laI3I8F9_CB8OAL_B35eZpjTCE8NpUt8yDi8Qldf5-7o0zgSY4ImOK_BmoyUlnBQ72jWCq2R1-PCYigcJWdzFHbwHJPE769x74tF3XP0E8kBMYPpcKfx_AYCm9yg"
   let ENVIRONMENT = "qa"
-
+  let projectName= "Playwright_Test_Project_Viewer"
+  let username = "acs-playwrite@ecsnmz0t.mailosaur.net"
+  let password = "playwright@1"
+ 
 
   console.log(`Launching ${BASE_URL}`);
-  await Login.launchBuild(BASE_URL, SKIP_CAPTCHA_NEW_IDP, SKIP_CAPTCHA_URL, NEW_IDP_OPT_IN, TOKEN, ENVIRONMENT);
+  //await Login.launchBuild(BASE_URL, SKIP_CAPTCHA_NEW_IDP, SKIP_CAPTCHA_URL, NEW_IDP_OPT_IN, TOKEN, ENVIRONMENT);
+  // launch build
+  try {
+    // Determine the flow based on the environment
+    if (["prod", "prod_emea", "prod_apac", "prod_aus"].includes(ENVIRONMENT)) {
+        console.log(`Environment is production-like (${ENVIRONMENT}). Using New OLD IDP Flow.`);
+        //await this.oldIDPFlow(SKIP_CAPTCHA_URL);
+        // old idp flow
+        try {
+            await page.goto(SKIP_CAPTCHA_URL);
+            await page.waitForTimeout(100);
+            // Check if the x-tt cookie is set
+            const cookies = await page.context().cookies();
+            // console.log("All cookies:", cookies);
+
+            const xTTCookie = cookies.find(cookie => cookie.name === 'x-tt');
+            if (xTTCookie) {
+                console.log("x-tt cookie is set:", xTTCookie);
+            } else {
+                console.log("x-tt cookie is not set.");
+            }
+
+        } catch (error) {
+            console.error("An error occurred while launching the build:", error);
+            // You can add additional error handling or logging here.
+        }
+
+    } else if (["staging", "qa", "staging_apac", "staging_aus"].includes(ENVIRONMENT)) {
+        console.log(`Environment is non-production (${ENVIRONMENT}). Using New IDP Flow.`);
+        //await this.newIDPFlowOptIn(NEW_IDP_OPT_IN);
+        console.log("Sending a direct HTTP request to new_idp_optin_url:", NEW_IDP_OPT_IN);
+
+        // Use page.request.get to make a direct GET request to the URL
+        const response = await page.request.get(NEW_IDP_OPT_IN);
+
+        console.log(response.status())
+        // Check the response status
+        if (response.status() === 204) {
+            console.log("Opt-in successful: No content response.");
+        } else if (response.status() === 302) {
+            console.log("Opt-in redirected. Check redirection URL:", response.headers()['location']);
+        } else {
+            console.warn("Unexpected status code:", response.status());
+        }
+
+        // Confirm cookies are set after the request
+        const cookies = await page.context().cookies();
+        //console.log("Cookies after opt-in request:", cookies);
+
+        // Look for the IDP Opt-In cookie dynamically based on a prefix
+        const idpOptInCookie = cookies.find(cookie => cookie.name.startsWith('idp-opt-in'));
+
+        if (idpOptInCookie) {
+            console.log("IDP Opt-In cookie is set:", idpOptInCookie);
+        } else {
+            console.error("IDP Opt-In cookie is not set.");
+            throw new Error("Opt-in cookie missing.");
+        }
+
+        //await this.bypassCaptcha(SKIP_CAPTCHA_NEW_IDP, TOKEN);
+        try {
+            console.log("Sending request to bypass CAPTCHA...");
+    
+            // Perform the GET request with the Authorization header
+            const response = await page.request.get(SKIP_CAPTCHA_NEW_IDP, {
+                headers: {
+                    Authorization: TOKEN,
+                },
+            });
+    
+            // Log the response status
+            console.log(`Bypass CAPTCHA response status: ${response.status()}`);
+    
+            // Check for the expected response status (204 No Content)
+            if (response.status() === 204) {
+                console.log("CAPTCHA bypassed successfully.");
+            } else {
+                console.error("Unexpected response status while bypassing CAPTCHA:", response.status());
+                throw new Error("CAPTCHA bypass failed.");
+            }
+    
+            // Get and log cookies to verify the x-tt cookie
+            const cookies = await page.context().cookies();
+            const xTTCookie = cookies.find(cookie => cookie.name === 'x-tt');
+            if (xTTCookie) {
+                console.log("x-tt cookie is set:", xTTCookie);
+            } else {
+                console.error("x-tt cookie is not set after bypassing CAPTCHA.");
+                throw new Error("x-tt cookie missing.");
+            }
+        } catch (error) {
+            console.error("An error occurred while bypassing CAPTCHA:", error);
+            throw error;
+        }
+    } else {
+        throw new Error(`Unsupported environment: ${ENVIRONMENT}`);
+    }
+
+    // Launch the build
+    console.log("Navigating to the base URL...");
+    await page.goto(BASE_URL);
+    console.log("Build launched.");
+} catch (error) {
+    console.error("An error occurred during the launch build process:", error);
+    throw error;
+}
   await page.waitForTimeout(3000);
   await takeSnapshot(page, "Build launched.", testInfo);
-  await Login.login("acs-playwrite@ecsnmz0t.mailosaur.net", "playwright@1", testInfo);
-  await projectList.searchAndSelectProject("Playwright_Test_Project_Viewer", testInfo);
+
+  // Login
+  //await Login.login("acs-playwrite@ecsnmz0t.mailosaur.net", "playwright@1", testInfo);
+  console.log("User is on Login page.")
+  await page.locator("//input[@id='userName']").waitFor({ state: 'visible', timeout: 60000 });
+  await page.locator("//input[@id='userName']").fill(username)
+  await page.waitForTimeout(500)
+  await takeSnapshot(page, "Username entered", testInfo);
+  await page.locator("//button[@id='verify_user_btn']").waitFor({ state: 'attached', timeout: 60000 });
+  await page.locator("//button[@id='verify_user_btn']").click()
+  await page.locator("//input[@id='password']").waitFor({ state: 'visible', timeout: 60000 });
+  await page.locator("//input[@id='password']").fill(password)
+  await page.waitForTimeout(500)
+  await takeSnapshot(page, "Password entered", testInfo);
+  await page.locator("//button[@id='btnSubmit']").waitFor({ state: 'attached', timeout: 60000 });
+  await page.locator("//button[@id='btnSubmit']").click()
+  console.log("Login successful.")
+
+  console.log("User on Project List page.");
+  await page.getByTestId('SearchField__input').waitFor({ state: "visible" });
+  await page.getByTestId('SearchField__input').click();
+  console.log("Clicked on project search field.");
+  await page.getByTestId('SearchField__input').fill(projectName);
+  await page.waitForTimeout(3000);
+  await takeSnapshot(page, "seaching project", testInfo);
+  await page.getByRole('link', { name: `${projectName}` }).waitFor({ state: "visible" });
+  await page.getByRole('link', { name: `${projectName}` }).click();
+ console.log("Clicked on searched Project row.");
+ await page.waitForTimeout(10000);
+ await expect(page.locator(`//div[text()='Home']`)).toBeVisible();
+  
+ await takeSnapshot(page, "Home Page", testInfo);
+//   await Login.searchAndSelectProject("Playwright_Test_Project_Viewer", testInfo);
+  //await page.goto(`https://acc-qa.autodesk.com/build/assets/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8/assets`)
   await page.goto(`https://acc-qa.autodesk.com/build/files/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8?folderUrn=urn%3Aadsk.wipqa%3Afs.folder%3Aco.XpWN_tylRFiMdS5scU5QoQ&entityId=urn%3Aadsk.wipqa%3Adm.lineage%3A3GPKqvD4T2OC_Q96_45AEQ&viewModel=detail&moduleId=folders`)
   await page.waitForTimeout(20000);
   await takeSnapshot(page, "File opened.", testInfo);
-  console.log('file opened.')
+  console.log('File opened.')
 
 
 
