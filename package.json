@@ -1,0 +1,16 @@
+{
+  "name": "chromatic-poc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@chromatic-com/playwright": "^0.12.2",
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.12",
+    "chromatic": "^11.28.2"
+  }
+}
