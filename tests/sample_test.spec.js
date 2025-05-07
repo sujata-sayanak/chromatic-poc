@@ -1,9 +1,5 @@
 
 import { test, expect, takeSnapshot } from "@chromatic-com/playwright";
-// import { test, expect } from '@playwright/test';
-import { LoginPage} from "../pages/common/loginPage";
-// import { ProjectListPage } from '../pages/common/projectListPage';
-//import { ViewerPage } from "../pages/viewer/viewerPage";
 
 
 
@@ -12,8 +8,6 @@ test.use({ diffThreshold: 0.7 });
 
 
 test("Login to build", async ({ page }, testInfo) => {
-  const Login = new LoginPage(page);
-  //const projectList = new ProjectListPage(page);
   let BASE_URL = 'https://acc-qa.autodesk.com/projects'
   let SKIP_CAPTCHA_NEW_IDP = 'https://idp.auth-staging.autodesk.com/accounts/v1/hcaptcha/bypass'
   let SKIP_CAPTCHA_URL = "https://accounts-staging.autodesk.com/Authentication/LogOn?trustToken=BDF22F39-19F1-435D-AAD1-9CE5B6081173"
@@ -26,13 +20,11 @@ test("Login to build", async ({ page }, testInfo) => {
  
 
   console.log(`Launching ${BASE_URL}`);
-  //await Login.launchBuild(BASE_URL, SKIP_CAPTCHA_NEW_IDP, SKIP_CAPTCHA_URL, NEW_IDP_OPT_IN, TOKEN, ENVIRONMENT);
   // launch build
   try {
     // Determine the flow based on the environment
     if (["prod", "prod_emea", "prod_apac", "prod_aus"].includes(ENVIRONMENT)) {
         console.log(`Environment is production-like (${ENVIRONMENT}). Using New OLD IDP Flow.`);
-        //await this.oldIDPFlow(SKIP_CAPTCHA_URL);
         // old idp flow
         try {
             await page.goto(SKIP_CAPTCHA_URL);
@@ -85,7 +77,6 @@ test("Login to build", async ({ page }, testInfo) => {
             throw new Error("Opt-in cookie missing.");
         }
 
-        //await this.bypassCaptcha(SKIP_CAPTCHA_NEW_IDP, TOKEN);
         try {
             console.log("Sending request to bypass CAPTCHA...");
     
@@ -167,8 +158,8 @@ test("Login to build", async ({ page }, testInfo) => {
   
  await takeSnapshot(page, "Home Page", testInfo);
 //   await Login.searchAndSelectProject("Playwright_Test_Project_Viewer", testInfo);
-  //await page.goto(`https://acc-qa.autodesk.com/build/assets/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8/assets`)
-  await page.goto(`https://acc-qa.autodesk.com/build/files/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8?folderUrn=urn%3Aadsk.wipqa%3Afs.folder%3Aco.XpWN_tylRFiMdS5scU5QoQ&entityId=urn%3Aadsk.wipqa%3Adm.lineage%3A3GPKqvD4T2OC_Q96_45AEQ&viewModel=detail&moduleId=folders`)
+  await page.goto(`https://acc-qa.autodesk.com/build/assets/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8/assets`)
+  //await page.goto(`https://acc-qa.autodesk.com/build/files/projects/49e73749-4f81-4b6e-a74c-e954ced1bfb8?folderUrn=urn%3Aadsk.wipqa%3Afs.folder%3Aco.XpWN_tylRFiMdS5scU5QoQ&entityId=urn%3Aadsk.wipqa%3Adm.lineage%3A3GPKqvD4T2OC_Q96_45AEQ&viewModel=detail&moduleId=folders`)
   await page.waitForTimeout(20000);
   await takeSnapshot(page, "File opened.", testInfo);
   console.log('File opened.')
